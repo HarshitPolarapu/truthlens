@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TruthLens</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #0f0e0c; --paper: #f5f2eb; --cream: #ede9df;
+      --warm-mid: #c8bfaa; --warm-dim: #a09585;
+      --accent: #b85c2a; --green: #2a6644; --red: #8b2020;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 52px 20px 80px; }
+    .container { width: 100%; max-width: 580px; }
+    h1 { font-family: 'Instrument Serif', serif; font-size: 38px; font-weight: 400; margin-bottom: 6px; }
+    h1 span { font-style: italic; color: var(--accent); }
+    .subtitle { font-size: 13px; color: var(--warm-dim); font-family: 'DM Mono', monospace; margin-bottom: 36px; }
+    label { display: block; font-size: 11px; font-weight: 500; color: var(--warm-dim); margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.8px; font-family: 'DM Mono', monospace; }
+    .row { display: flex; gap: 10px; margin-bottom: 20px; }
+    select { flex: 1; padding: 9px 28px 9px 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; border: 1px solid var(--warm-mid); border-radius: 6px; background: white; color: var(--ink); outline: none; cursor: pointer; appearance: none; }
+    select:focus { border-color: var(--accent); }
+    textarea { width: 100%; padding: 14px 16px; font-size: 14px; font-family: 'DM Sans', sans-serif; border: 1px solid var(--warm-mid); border-radius: 6px; background: white; color: var(--ink); resize: vertical; min-height: 130px; outline: none; line-height: 1.65; }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--warm-mid); }
+    .char { font-size: 11px; color: var(--warm-mid); font-family: 'DM Mono', monospace; text-align: right; margin-top: 5px; margin-bottom: 20px; }
+    button#analyze { width: 100%; padding: 12px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; background: var(--ink); color: var(--paper); border: none; border-radius: 6px; cursor: pointer; transition: background 0.15s; }
+    button#analyze:hover { background: #2a2620; }
+    button#analyze:disabled { background: var(--warm-mid); cursor: not-allowed; }
+    .status { font-size: 12px; color: var(--warm-dim); font-family: 'DM Mono', monospace; text-align: center; margin-top: 14px; min-height: 18px; }
+    .error { margin-top: 12px; padding: 11px 14px; background: #fef2f2; border: 1px solid #f5c6c6; border-radius: 6px; font-size: 13px; color: var(--red); display: none; }
+    .error.visible { display: block; }
+    .result { margin-top: 32px; border: 1px solid var(--warm-mid); border-radius: 10px; background: white; overflow: hidden; display: none; animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .result.visible { display: block; }
+    .result-top { padding: 22px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid var(--cream); }
+    .verdict-label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--warm-dim); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 5px; }
+    .verdict { font-family: 'Instrument Serif', serif; font-size: 22px; margin-bottom: 8px; }
+    .summary { font-size: 13px; color: #555; line-height: 1.65; }
+    .score-wrap { text-align: right; flex-shrink: 0; }
+    .score { font-family: 'DM Mono', monospace; font-size: 40px; font-weight: 500; line-height: 1; }
+    .score-denom { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--warm-dim); margin-top: 2px; }
+    .score-bar { width: 64px; height: 4px; background: var(--cream); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+    .flags { display: grid; grid-template-columns: 1fr 1fr; }
+    .flag-col { padding: 16px 22px; }
+    .flag-col:first-child { border-right: 1px solid var(--cream); }
+    .flag-title { font-size: 10px; font-weight: 600; font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+    .flag-title.red { color: var(--red); }
+    .flag-title.green { color: var(--green); }
+    .flag-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+    .flag-list li { font-size: 13px; color: #444; line-height: 1.45; padding-left: 14px; position: relative; }
+    .flag-list li::before { content: '–'; position: absolute; left: 0; color: var(--warm-mid); }
+    .flag-list .empty { color: var(--warm-mid); font-style: italic; font-size: 12px; }
+    .sources-note { padding: 13px 22px; font-size: 12px; color: var(--warm-dim); font-family: 'DM Mono', monospace; line-height: 1.6; border-top: 1px solid var(--cream); background: var(--paper); }
+    .reset { display: block; width: 100%; margin-top: 14px; padding: 10px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: none; border: 1px solid var(--warm-mid); border-radius: 6px; color: var(--warm-dim); cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+    .reset:hover { border-color: var(--ink); color: var(--ink); }
+    @media (max-width: 480px) { .flags { grid-template-columns: 1fr; } .flag-col:first-child { border-right: none; border-bottom: 1px solid var(--cream); } h1 { font-size: 30px; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Truth<span>Lens</span></h1>
+    <p class="subtitle">paste a headline or article · get an ai fact-check</p>
+
+    <label>Region &amp; political lens</label>
+    <div class="row">
+      <select id="region">
+        <option value="India">India</option>
+        <option value="USA">USA</option>
+        <option value="European Union">European Union</option>
+        <option value="Global">Global</option>
+      </select>
+      <select id="leaning">
+        <option value="Far Left">Far Left</option>
+        <option value="Left">Left</option>
+        <option value="Centre" selected>Centre</option>
+        <option value="Right">Right</option>
+        <option value="Far Right">Far Right</option>
+      </select>
+    </div>
+
+    <label>Article or headline</label>
+    <textarea id="text" placeholder="Paste your text here…" maxlength="3000"></textarea>
+    <div class="char"><span id="count">0</span> / 3000</div>
+
+    <button id="analyze">Analyze</button>
+    <div class="error" id="error"></div>
+    <div class="status" id="status"></div>
+
+    <div class="result" id="result">
+      <div class="result-top">
+        <div class="verdict-wrap">
+          <div class="verdict-label">Verdict</div>
+          <div class="verdict" id="verdict"></div>
+          <div class="summary" id="summary"></div>
+        </div>
+        <div class="score-wrap">
+          <div class="score" id="score"></div>
+          <div class="score-denom">/ 10</div>
+          <div class="score-bar"><div class="score-bar-fill" id="score-bar-fill"></div></div>
+        </div>
+      </div>
+      <div class="flags">
+        <div class="flag-col">
+          <div class="flag-title red">⚑ Red flags</div>
+          <ul class="flag-list" id="red-flags"></ul>
+        </div>
+        <div class="flag-col">
+          <div class="flag-title green">✓ Green flags</div>
+          <ul class="flag-list" id="green-flags"></ul>
+        </div>
+      </div>
+      <div class="sources-note" id="sources-note"></div>
+    </div>
+
+    <button class="reset" id="reset" style="display:none">↩ Analyze another</button>
+  </div>
+
+  <script>
+    // ── PASTE YOUR GEMINI API KEY HERE ────────────────────────────────────────
+    const API_KEY = "AIzaSyAMe-0qEaCj3fO5zoKPMd_WUQL5khC6t7Y";
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${API_KEY}`;
+
+    const sourceMap = {
+      India: { "Far Left": "Newsclick, The Caravan, Scroll, Wire", "Left": "The Wire, Scroll.in, The Quint, NDTV", "Centre": "The Hindu, NDTV, Hindustan Times, Reuters India, PTI", "Right": "Times of India, Indian Express, ANI, Economic Times", "Far Right": "OpIndia, Republic World, Swarajya, Organiser" },
+      USA: { "Far Left": "Jacobin, Democracy Now, The Intercept", "Left": "The Guardian US, MSNBC, Vox, HuffPost", "Centre": "Reuters, AP News, NPR, PBS NewsHour", "Right": "Fox News, New York Post, Washington Examiner", "Far Right": "Breitbart, Daily Wire, Gateway Pundit" },
+      "European Union": { "Far Left": "transform! europe, Le Monde Diplomatique", "Left": "EUobserver, Social Europe, Euractiv (left)", "Centre": "Euractiv, Politico Europe, Deutsche Welle, BBC Europe", "Right": "Politico Europe (right), European Conservative", "Far Right": "Voice of Europe, Remix News, Visegrád Post" },
+      Global: { "Far Left": "Al Jazeera opinion, Jacobin, Democracy Now", "Left": "The Guardian, Al Jazeera, BBC (editorial), Vox", "Centre": "Reuters, AP News, BBC News, AFP", "Right": "Fox News, Daily Telegraph, Washington Times", "Far Right": "Breitbart, Gateway Pundit, Epoch Times" }
+    };
+
+    const textarea = document.getElementById("text");
+    textarea.addEventListener("input", () => { document.getElementById("count").textContent = textarea.value.length; });
+
+    document.getElementById("analyze").addEventListener("click", async () => {
+      const text = textarea.value.trim();
+      const region = document.getElementById("region").value;
+      const leaning = document.getElementById("leaning").value;
+      const sources = sourceMap[region]?.[leaning] || "mainstream outlets";
+
+      if (!text) { showError("Please paste some text first."); return; }
+      hideError();
+      setStatus("Analyzing…");
+      document.getElementById("analyze").disabled = true;
+      document.getElementById("result").classList.remove("visible");
+      document.getElementById("reset").style.display = "none";
+
+      const prompt = `You are a fact-checking assistant. Analyze the following article or headline from a ${leaning} perspective in the ${region} region.
+
+Respond ONLY with a valid JSON object — no markdown, no extra text. Keys required:
+- "verdict": e.g. "Mostly True", "Misleading", "False", "Satire", "Unverifiable"
+- "score": integer 0–10 (10 = fully accurate)
+- "summary": 2–3 sentence explanation
+- "red_flags": array of strings (empty array if none)
+- "green_flags": array of strings (empty array if none)
+- "sources_note": one sentence suggesting cross-checking against: ${sources}
+
+Article:
+"""
+${text}
+"""`;
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 800 } })
+        });
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
+        const data = await res.json();
+        const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const parsed = JSON.parse(raw.replace(/```json|```/gi, "").trim());
+        showResult(parsed);
+      } catch (err) {
+        showError("Error: " + (err.message || "Something went wrong. Check your API key."));
+      } finally {
+        setStatus("");
+        document.getElementById("analyze").disabled = false;
+      }
+    });
+
+    function showResult(r) {
+      const score = Number(r.score) || 0;
+      const color = score >= 7 ? "#2a6644" : score >= 4 ? "#b85c2a" : "#8b2020";
+      document.getElementById("verdict").textContent = r.verdict || "Unknown";
+      document.getElementById("verdict").style.color = color;
+      document.getElementById("summary").textContent = r.summary || "";
+      document.getElementById("score").textContent = score;
+      document.getElementById("score").style.color = color;
+      const fill = document.getElementById("score-bar-fill");
+      fill.style.width = (score * 10) + "%";
+      fill.style.background = color;
+      const redList = document.getElementById("red-flags");
+      redList.innerHTML = "";
+      (r.red_flags?.length ? r.red_flags : []).forEach(f => { const li = document.createElement("li"); li.textContent = f; redList.appendChild(li); });
+      if (!r.red_flags?.length) redList.innerHTML = '<li class="empty">None detected</li>';
+      const greenList = document.getElementById("green-flags");
+      greenList.innerHTML = "";
+      (r.green_flags?.length ? r.green_flags : []).forEach(f => { const li = document.createElement("li"); li.textContent = f; greenList.appendChild(li); });
+      if (!r.green_flags?.length) greenList.innerHTML = '<li class="empty">None detected</li>';
+      document.getElementById("sources-note").textContent = r.sources_note || "";
+      document.getElementById("result").classList.add("visible");
+      document.getElementById("reset").style.display = "block";
+    }
+
+    document.getElementById("reset").addEventListener("click", () => {
+      document.getElementById("result").classList.remove("visible");
+      document.getElementById("reset").style.display = "none";
+      textarea.value = "";
+      document.getElementById("count").textContent = "0";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    function showError(msg) { const el = document.getElementById("error"); el.textContent = msg; el.classList.add("visible"); }
+    function hideError() { document.getElementById("error").classList.remove("visible"); }
+    function setStatus(msg) { document.getElementById("status").textContent = msg; }
+  </script>
+</body>
+</html>
